@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "AgroChain_2.0",
+    "slug": "agrochain_2_0",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/splash-icon.png",
+    "splash": {
+      "image": "./assets/images/splash-bg.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1B5E20"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "web": {
+      "favicon": "./assets/images/splash-icon.png"
+    },
+    "plugins": [
+      "react-native-localize"
+    ]
+  }
+}
