@@ -8,6 +8,10 @@ export default function SmartAssistantLayout() {
       screenOptions={{
         headerShown: true,
         headerTitleAlign: "center",
+        headerBackTitleVisible: false,
+        headerTintColor: "#fff",
+        headerStyle: { backgroundColor: "#0f5132" },
+        headerTitleStyle: { color: "#fff", fontWeight: "700" },
       }}
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />

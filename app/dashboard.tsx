@@ -379,10 +379,187 @@
 // app/farmer/dashboard.tsx
 // app/farmer/dashboard.tsx
 // app/farmer/dashboard.tsx
+// import React, { useEffect, useRef } from "react";
+// import { useRouter } from "expo-router";
+// import { LinearGradient } from "expo-linear-gradient";
+// import { MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
+// import {
+//   Animated,
+//   Dimensions,
+//   ScrollView,
+//   StyleSheet,
+//   Text,
+//   TouchableOpacity,
+//   View,
+// } from "react-native";
+// import { useLanguage } from "./i18n/LanguageContext"; // ADJUST path if needed
+// import { useRole } from "../context/RoleContext";
+
+// const { width } = Dimensions.get("window");
+// const CARD_WIDTH = Math.min(width * 0.92, 820);
+
+// export default function FarmerDashboard() {
+//   const router = useRouter();
+//   const { t } = useLanguage();
+//   const { user } = useRole();
+
+//   // animation
+//   const fade = useRef(new Animated.Value(0)).current;
+//   const slide = useRef(new Animated.Value(18)).current;
+
+//   useEffect(() => {
+//     Animated.parallel([
+//       Animated.timing(fade, { toValue: 1, duration: 650, useNativeDriver: true }),
+//       Animated.spring(slide, { toValue: 0, friction: 7, useNativeDriver: true }),
+//     ]).start();
+//   }, []);
+
+//   // MAIN CARDS (no stats)
+//   const actions = [
+//     {
+//       id: "weather",
+//       title: t("weather") || "Weather",
+//       subtitle: t("weather_sub") || "Check today's forecast & alerts",
+//       icon: <MaterialCommunityIcons name="weather-partly-cloudy" size={30} color="#fff" />,
+//       route: "/weather",
+//       colors: ["#A7F3D0", "#4CAF50"],
+//     },
+//     {
+//       id: "assistant",
+//       title: t("smartAssistant") || "Smart Assistant",
+//       subtitle: t("assistant_sub") || "AI insights for crops & diseases",
+//       icon: <FontAwesome5 name="robot" size={28} color="#fff" />,
+//       route: "/smart-assistant",
+//       colors: ["#BBDEFB", "#2196F3"],
+//     },
+//     {
+//       id: "crops",
+//       title: t("cropManagement") || "Crop Management",
+//       subtitle: t("crops_sub") || "Add & track your crops",
+//       icon: <MaterialCommunityIcons name="sprout" size={30} color="#fff" />,
+//       route: "/farmer/crops",
+//       colors: ["#FFF9C4", "#FBC02D"],
+//     },
+//     {
+//       id: "market",
+//       title: t("marketplace") || "Marketplace",
+//       subtitle: t("market_sub") || "Sell directly to buyers",
+//       icon: <FontAwesome5 name="store" size={28} color="#fff" />,
+//       route: "/farmer/marketplace",
+//       colors: ["#FFCCBC", "#FF7043"],
+//     },
+//     {
+//       id: "categories",
+//       title: t("categories") || "Categories",
+//       subtitle: t("categories_sub") || "Browse crop categories",
+//       icon: <MaterialCommunityIcons name="grid" size={28} color="#fff" />,
+//       route: "/categories",
+//       colors: ["#FDE68A", "#FBBF24"],
+//     },
+//   ];
+
+//   return (
+//     <LinearGradient colors={["#E8F5E9", "#FFFFFF"]} style={styles.wrapper}>
+//       {/* Header */}
+//       <Animated.View style={[styles.header, { opacity: fade, transform: [{ translateY: slide }] }]}>
+//         <Text style={styles.greeting}>
+//           {t("hello") || "Hello"}, {user?.name || "Farmer"} 👋
+//         </Text>
+//         <Text style={styles.sub}>{t("dashboardSub") || "Your Smart Farming Dashboard"}</Text>
+//       </Animated.View>
+
+//       {/* CONTENT */}
+//       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+//         {/* ACTION CARDS */}
+//         <View style={{ width: "100%", alignItems: "center" }}>
+//           {actions.map((a) => (
+//             <TouchableOpacity
+//               key={a.id}
+//               activeOpacity={0.92}
+//               onPress={() => router.push(a.route)}
+//               style={{ marginBottom: 12 }}
+//             >
+//               <LinearGradient colors={a.colors} style={styles.actionCard}>
+//                 <View style={styles.iconWrap}>{a.icon}</View>
+//                 <View style={{ flex: 1 }}>
+//                   <Text style={styles.actionTitle}>{a.title}</Text>
+//                   <Text style={styles.actionSub}>{a.subtitle}</Text>
+//                 </View>
+//                 <MaterialCommunityIcons name="chevron-right" size={24} color="#ffffffcc" />
+//               </LinearGradient>
+//             </TouchableOpacity>
+//           ))}
+//         </View>
+
+//         <View style={{ height: 40 }} />
+//       </ScrollView>
+//     </LinearGradient>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   wrapper: {
+//     flex: 1,
+//     paddingTop: 46,
+//   },
+//   header: {
+//     paddingHorizontal: 18,
+//     marginBottom: 6,
+//   },
+//   greeting: {
+//     fontSize: 26,
+//     fontWeight: "800",
+//     color: "#2E7D32",
+//   },
+//   sub: {
+//     fontSize: 13,
+//     color: "#4E6E33",
+//     marginTop: 6,
+//   },
+//   scroll: {
+//     alignItems: "center",
+//     paddingBottom: 40,
+//   },
+//   actionCard: {
+//     width: CARD_WIDTH,
+//     borderRadius: 16,
+//     padding: 16,
+//     flexDirection: "row",
+//     alignItems: "center",
+//     elevation: 6,
+//     shadowColor: "#000",
+//     shadowOpacity: 0.08,
+//     shadowRadius: 8,
+//   },
+//   iconWrap: {
+//     width: 64,
+//     height: 64,
+//     borderRadius: 12,
+//     backgroundColor: "#ffffff33",
+//     justifyContent: "center",
+//     alignItems: "center",
+//     marginRight: 16,
+//   },
+//   actionTitle: {
+//     fontSize: 16,
+//     fontWeight: "900",
+//     color: "#fff",
+//   },
+//   actionSub: {
+//     fontSize: 12,
+//     color: "#ffffffdd",
+//     marginTop: 6,
+//   },
+// });
+
 import React, { useEffect, useRef } from "react";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
+import {
+  MaterialCommunityIcons,
+  FontAwesome5,
+  Ionicons,
+} from "@expo/vector-icons";
 import {
   Animated,
   Dimensions,
@@ -391,8 +568,10 @@ import {
   Text,
   TouchableOpacity,
   View,
+  SafeAreaView,
+  StatusBar,
 } from "react-native";
-import { useLanguage } from "./i18n/LanguageContext"; // ADJUST path if needed
+import { useLanguage } from "./i18n/LanguageContext";
 import { useRole } from "../context/RoleContext";
 
 const { width } = Dimensions.get("window");
@@ -409,18 +588,31 @@ export default function FarmerDashboard() {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fade, { toValue: 1, duration: 650, useNativeDriver: true }),
-      Animated.spring(slide, { toValue: 0, friction: 7, useNativeDriver: true }),
+      Animated.timing(fade, {
+        toValue: 1,
+        duration: 650,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slide, {
+        toValue: 0,
+        friction: 7,
+        useNativeDriver: true,
+      }),
     ]).start();
   }, []);
 
-  // MAIN CARDS (no stats)
   const actions = [
     {
       id: "weather",
       title: t("weather") || "Weather",
       subtitle: t("weather_sub") || "Check today's forecast & alerts",
-      icon: <MaterialCommunityIcons name="weather-partly-cloudy" size={30} color="#fff" />,
+      icon: (
+        <MaterialCommunityIcons
+          name="weather-partly-cloudy"
+          size={30}
+          color="#fff"
+        />
+      ),
       route: "/weather",
       colors: ["#A7F3D0", "#4CAF50"],
     },
@@ -436,7 +628,9 @@ export default function FarmerDashboard() {
       id: "crops",
       title: t("cropManagement") || "Crop Management",
       subtitle: t("crops_sub") || "Add & track your crops",
-      icon: <MaterialCommunityIcons name="sprout" size={30} color="#fff" />,
+      icon: (
+        <MaterialCommunityIcons name="sprout" size={30} color="#fff" />
+      ),
       route: "/farmer/crops",
       colors: ["#FFF9C4", "#FBC02D"],
     },
@@ -452,89 +646,231 @@ export default function FarmerDashboard() {
       id: "categories",
       title: t("categories") || "Categories",
       subtitle: t("categories_sub") || "Browse crop categories",
-      icon: <MaterialCommunityIcons name="grid" size={28} color="#fff" />,
+      icon: (
+        <MaterialCommunityIcons name="grid" size={28} color="#fff" />
+      ),
       route: "/categories",
       colors: ["#FDE68A", "#FBBF24"],
     },
   ];
 
   return (
-    <LinearGradient colors={["#E8F5E9", "#FFFFFF"]} style={styles.wrapper}>
-      {/* Header */}
-      <Animated.View style={[styles.header, { opacity: fade, transform: [{ translateY: slide }] }]}>
-        <Text style={styles.greeting}>
-          {t("hello") || "Hello"}, {user?.name || "Farmer"} 👋
-        </Text>
-        <Text style={styles.sub}>{t("dashboardSub") || "Your Smart Farming Dashboard"}</Text>
-      </Animated.View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#E8F5E9" }}>
+      <StatusBar barStyle="dark-content" backgroundColor="#E8F5E9" />
+      <LinearGradient colors={["#E8F5E9", "#FFFFFF"]} style={styles.wrapper}>
+        {/* Top hero header */}
+        <Animated.View
+          style={[
+            styles.headerBlock,
+            { opacity: fade, transform: [{ translateY: slide }] },
+          ]}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View style={styles.avatar}>
+              <MaterialCommunityIcons
+                name="account"
+                size={26}
+                color="#2E7D32"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.greeting}>
+                {t("hello") || "Hello"},{" "}
+                {user?.name || t("farmer") || "Farmer"} 👋
+              </Text>
+              <Text style={styles.sub}>
+                {t("dashboardSub") ||
+                  "Plan your day with smart farming tools."}
+              </Text>
+            </View>
+          </View>
 
-      {/* CONTENT */}
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* ACTION CARDS */}
-        <View style={{ width: "100%", alignItems: "center" }}>
-          {actions.map((a) => (
-            <TouchableOpacity
-              key={a.id}
-              activeOpacity={0.92}
-              onPress={() => router.push(a.route)}
-              style={{ marginBottom: 12 }}
-            >
-              <LinearGradient colors={a.colors} style={styles.actionCard}>
-                <View style={styles.iconWrap}>{a.icon}</View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.actionTitle}>{a.title}</Text>
-                  <Text style={styles.actionSub}>{a.subtitle}</Text>
-                </View>
-                <MaterialCommunityIcons name="chevron-right" size={24} color="#ffffffcc" />
-              </LinearGradient>
-            </TouchableOpacity>
-          ))}
-        </View>
+          <View style={styles.chipRow}>
+            <View style={styles.chip}>
+              <Ionicons name="leaf" size={14} color="#166534" />
+              <Text style={styles.chipText}>Smart Farming</Text>
+            </View>
+            <View style={styles.chip}>
+              <Ionicons name="cloud-outline" size={14} color="#166534" />
+              <Text style={styles.chipText}>Weather-aware</Text>
+            </View>
+            <View style={styles.chip}>
+              <Ionicons name="sparkles-outline" size={14} color="#166534" />
+              <Text style={styles.chipText}>AI Assistant</Text>
+            </View>
+          </View>
+        </Animated.View>
 
-        <View style={{ height: 40 }} />
-      </ScrollView>
-    </LinearGradient>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Quick highlight row
+          <View style={styles.quickRow}>
+            <View style={styles.quickCard}>
+              <MaterialCommunityIcons
+                name="robot-outline"
+                size={22}
+                color="#1B5E20"
+              />
+              <Text style={styles.quickTitle}>AI Help</Text>
+              <Text style={styles.quickSub}>Disease & crop tips</Text>
+            </View>
+            <View style={styles.quickCard}>
+              <MaterialCommunityIcons
+                name="weather-cloudy-clock"
+                size={22}
+                color="#1B5E20"
+              />
+              <Text style={styles.quickTitle}>Weather</Text>
+              <Text style={styles.quickSub}>Daily forecast</Text>
+            </View>
+            <View style={styles.quickCard}>
+              <MaterialCommunityIcons
+                name="storefront-outline"
+                size={22}
+                color="#1B5E20"
+              />
+              <Text style={styles.quickTitle}>Market</Text>
+              <Text style={styles.quickSub}>Sell your crops</Text>
+            </View>
+          </View> */}
+
+          {/* MAIN ACTION CARDS */}
+          <View style={{ width: "100%", alignItems: "center", marginTop: 10 }}>
+            {actions.map((a) => (
+              <TouchableOpacity
+                key={a.id}
+                activeOpacity={0.92}
+                onPress={() => router.push(a.route)}
+                style={{ marginBottom: 14 }}
+              >
+                <LinearGradient colors={a.colors} style={styles.actionCard}>
+                  <View style={styles.iconWrap}>{a.icon}</View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.actionTitle}>{a.title}</Text>
+                    <Text style={styles.actionSub}>{a.subtitle}</Text>
+                  </View>
+                  <MaterialCommunityIcons
+                    name="chevron-right"
+                    size={26}
+                    color="#ffffffee"
+                  />
+                </LinearGradient>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </LinearGradient>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
-    paddingTop: 46,
+    paddingTop: 8,
   },
-  header: {
-    paddingHorizontal: 18,
-    marginBottom: 6,
+  headerBlock: {
+    marginHorizontal: 16,
+    marginTop: 10,
+    padding: 16,
+    borderRadius: 18,
+    backgroundColor: "#C8E6C9",
+    shadowColor: "#000",
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 999,
+    backgroundColor: "#E8F5E9",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
   },
   greeting: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: "800",
     color: "#2E7D32",
   },
   sub: {
     fontSize: 13,
     color: "#4E6E33",
-    marginTop: 6,
+    marginTop: 4,
+  },
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 10,
+    gap: 6,
+  },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "#E9F5E9",
+  },
+  chipText: {
+    fontSize: 11,
+    marginLeft: 4,
+    color: "#166534",
+    fontWeight: "600",
   },
   scroll: {
     alignItems: "center",
     paddingBottom: 40,
   },
+  quickRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginHorizontal: 16,
+    marginTop: 14,
+  },
+  quickCard: {
+    flex: 1,
+    marginHorizontal: 4,
+    backgroundColor: "#F1F8E9",
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    alignItems: "center",
+  },
+  quickTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#1B5E20",
+    marginTop: 4,
+  },
+  quickSub: {
+    fontSize: 11,
+    color: "#4E6E33",
+    marginTop: 2,
+    textAlign: "center",
+  },
   actionCard: {
     width: CARD_WIDTH,
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
-    elevation: 6,
     shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowOpacity: 0.09,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 7,
   },
   iconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 12,
+    width: 60,
+    height: 60,
+    borderRadius: 16,
     backgroundColor: "#ffffff33",
     justifyContent: "center",
     alignItems: "center",

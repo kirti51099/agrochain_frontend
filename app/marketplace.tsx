@@ -1,67 +1,99 @@
 // app/farmer/marketplace.tsx
-import React, { useState, useEffect } from "react";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
+  ActivityIndicator,
   Dimensions,
   FlatList,
   Image,
-  TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import BackHeader from "../components/BackHeader";
+import { useLanguage } from "./i18n/LanguageContext";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = (width / 2) - 24;
 const CARD_HEIGHT = 220;
 
-// Mock product list (replace image URIs with local require(...) if you want)
-const PRODUCTS = [
-  { id: "p1", name: "Fresh Apples", price: 120, unit: "kg", imageUri: "https://picsum.photos/id/1080/600/400" },
-  { id: "p2", name: "Organic Tomatoes", price: 80, unit: "kg", imageUri: "https://picsum.photos/id/292/600/400" },
-  { id: "p3", name: "Potatoes", price: 50, unit: "kg", imageUri: "https://picsum.photos/id/1081/600/400" },
-  { id: "p4", name: "Bananas", price: 100, unit: "doz", imageUri: "https://picsum.photos/id/1082/600/400" },
-  { id: "p5", name: "Spinach", price: 30, unit: "bundle", imageUri: "https://picsum.photos/id/1011/600/400" },
-  { id: "p6", name: "Carrots", price: 60, unit: "kg", imageUri: "https://picsum.photos/id/29/600/400" },
-];
+import { BACKEND_BASE } from "../constants/backend";
 
 export default function MarketplaceScreen() {
   const router = useRouter();
+  const { t, language } = useLanguage();
   const [loading, setLoading] = useState(true);
-  const [products, setProducts] = useState<typeof PRODUCTS>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
-  // simulate data load
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setProducts(PRODUCTS);
+  // Load products from backend - ONLY real data, no fallbacks
+  const loadProducts = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    try {
+      const response = await fetch(`${BACKEND_BASE}/api/products`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) {
+          // Use ONLY backend data with real image URLs
+          const realProducts = data.map((product: any) => ({
+            ...product,
+            // Use imageUrl from backend, or image field if it exists
+            image: product.imageUrl 
+              ? { uri: product.imageUrl } 
+              : product.image 
+              ? (typeof product.image === 'string' ? { uri: product.image } : product.image)
+              : null,
+          }));
+          setProducts(realProducts);
+        } else {
+          // No products available - show empty state
+          setProducts([]);
+        }
+      } else {
+        // API error - show empty state
+        setProducts([]);
+      }
+    } catch (error) {
+      console.warn("Failed to fetch products from backend:", error);
+      // No fallback - show empty state
+      setProducts([]);
+    } finally {
       setLoading(false);
-    }, 600);
-    return () => clearTimeout(t);
+      if (isRefresh) setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadProducts();
   }, []);
 
   function onRefresh() {
-    setRefreshing(true);
-    // simulate refresh
-    setTimeout(() => {
-      setProducts(PRODUCTS); // in real app fetch again
-      setRefreshing(false);
-    }, 800);
+    loadProducts(true);
   }
 
-  function renderCard({ item }: { item: typeof PRODUCTS[number] }) {
+  function renderCard({ item }: { item: any }) {
     return (
       <View style={styles.cardWrap}>
         <View style={styles.card}>
           <View style={styles.imageWrap}>
-            <Image
-              source={{ uri: item.imageUri }}
-              style={styles.image}
-              resizeMode="cover"
-            />
+            {item.image ? (
+              <Image
+                source={item.image}
+                style={styles.image}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.placeholderImage}>
+                <Text style={styles.placeholderText}>📦</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.info}>
@@ -72,8 +104,10 @@ export default function MarketplaceScreen() {
               activeOpacity={0.9}
               onPress={() => router.push(`/farmer/product-details?productId=${item.id}`)}
             >
-              <LinearGradient colors={["#2E7D32", "#FFB74D"]} style={styles.cta}>
-                <Text style={styles.ctaText}>View Details</Text>
+              <LinearGradient colors={["#2E7D32", "#4CAF50"]} style={styles.cta}>
+                <Text style={styles.ctaText}>
+                  {t("viewDetails") || "View Details"}
+                </Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -91,22 +125,46 @@ export default function MarketplaceScreen() {
   }
 
   return (
-    <FlatList
-      contentContainerStyle={styles.container}
-      columnWrapperStyle={{ justifyContent: "space-between" }}
-      data={products}
-      keyExtractor={(p) => p.id}
-      numColumns={2}
-      renderItem={renderCard}
-      showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      ListHeaderComponent={
-        <View style={styles.headerWrap}>
-          <Text style={styles.header}>Available Products</Text>
-          <Text style={styles.headerSub}>Fresh, direct from farmers — browse and view details</Text>
-        </View>
-      }
-    />
+    <View style={{ flex: 1 }}>
+      <BackHeader title={t("marketplace") || "Marketplace"} />
+      <FlatList
+        contentContainerStyle={styles.container}
+        columnWrapperStyle={{ justifyContent: "space-between" }}
+        data={products}
+        keyExtractor={(p) => p.id}
+        numColumns={2}
+        renderItem={renderCard}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        ListHeaderComponent={
+          <View style={styles.headerWrap}>
+            <Text style={styles.header}>
+              {t("availableProducts") || "Available Products"}
+            </Text>
+            <Text style={styles.headerSub}>
+              {t("freshFromFarmers") || "Fresh, direct from farmers — browse and view details"}
+            </Text>
+          </View>
+        }
+        ListEmptyComponent={
+          !loading && (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyIcon}>📦</Text>
+              <Text style={styles.emptyText}>
+                {language === "mr" 
+                  ? "कोणतेही उत्पादने उपलब्ध नाहीत" 
+                  : "No products available"}
+              </Text>
+              <Text style={styles.emptySubText}>
+                {language === "mr"
+                  ? "कृपया नंतर पुन्हा तपासा"
+                  : "Please check back later"}
+              </Text>
+            </View>
+          )
+        }
+      />
+    </View>
   );
 }
 
@@ -157,6 +215,40 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     height: "100%",
+  },
+  placeholderImage: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#e0e0e0",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  placeholderText: {
+    fontSize: 48,
+    opacity: 0.5,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+  },
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+    opacity: 0.5,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#64748B",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  emptySubText: {
+    fontSize: 14,
+    color: "#94A3B8",
+    textAlign: "center",
   },
 
   info: {

@@ -4,7 +4,15 @@ import { Stack } from "expo-router";
 
 export default function BuyerLayout() {
   return (
-    <Stack screenOptions={{ headerTitleAlign: "center" }}>
+    <Stack
+      screenOptions={{
+        headerTitleAlign: "center",
+        headerBackTitleVisible: false,
+        headerTintColor: "#fff",
+        headerStyle: { backgroundColor: "#0f5132" },
+        headerTitleStyle: { color: "#fff", fontWeight: "700" },
+      }}
+    >
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="products" options={{ title: "Marketplace" }} />
       <Stack.Screen name="product-details" options={{ title: "Product" }} />

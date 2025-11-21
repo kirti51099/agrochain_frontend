@@ -23,6 +23,14 @@ const categoryItems: Record<string, { id: string; title: string; image?: any }[]
     { id: "1", title: "Wheat", image: require("../../assets/images/wheat.png") },
     { id: "2", title: "Rice", image: require("../../assets/images/rice.png") },
     { id: "3", title: "Maize", image: require("../../assets/images/maize.png") },
+    { id: "4", title: "Amaranth", image: require("../../assets/images/Grains/Amaranth.webp") },
+    { id: "5", title: "barley", image: require("../../assets/images/Grains/barley.jpg") },
+    //C:\Users\kirti\OneDrive\Desktop\Agrochain_2.0\Frontend_agro\assets\images\Grains\BarnyardMillet.png
+    { id: "6", title: "BuckWheat", image: require("../../assets/images/Grains/Buckwheat.webp") },
+    { id: "7", title: "Foxtail Millet", image: require("../../assets/images/Grains/Foxtail Millet.webp") },
+    { id: "8", title: "oats", image: require("../../assets/images/Grains/oats.jpg") },
+    { id: "9", title: "Proso Millet", image: require("../../assets/images/Grains/Proso Millet.jpeg") },
+    
   ],
   Vegetables: [
     { id: "4", title: "Potato", image: require("../../assets/images/potato.png") },

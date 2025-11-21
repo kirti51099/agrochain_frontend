@@ -26,6 +26,9 @@
     },
     "plugins": [
       "react-native-localize"
-    ]
+    ],
+    "extra": {
+      "openWeatherApiKey": "94b2957f295f391213969a45d76511d9"
+    }
   }
 }

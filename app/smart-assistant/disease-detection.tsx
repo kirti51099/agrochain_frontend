@@ -1,3 +1,6 @@
+
+
+
 // // app/smart-assistant/disease-detection.tsx
 // import React, { useEffect, useRef, useState } from "react";
 // import {
@@ -17,8 +20,7 @@
 // import AsyncStorage from "@react-native-async-storage/async-storage";
 // import Animated, { FadeIn, FadeInUp, withSpring, useSharedValue, useAnimatedStyle } from "react-native-reanimated";
 // import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
-
-// const BACKEND_BASE = "http://10.58.115.176:5000"; // change if needed
+// import { BACKEND_BASE } from "../../constants/backend";
 
 // export default function DiseaseDetection() {
 //   const router = useRouter();
@@ -93,26 +95,37 @@
 //     setError(null);
 
 //     try {
+//       // prepare filename & mime
 //       const filenameParts = imageUri.split("/");
-//       const name = filenameParts[filenameParts.length - 1];
+//       const name = filenameParts[filenameParts.length - 1] || `photo.${Platform.OS === "android" ? "jpg" : "jpg"}`;
 //       const match = /\.(\w+)$/.exec(name);
 //       const ext = match ? match[1].toLowerCase() : "jpg";
 //       const mime = ext === "png" ? "image/png" : "image/jpeg";
 
-//       const form = new FormData();
-//       // @ts-ignore - React Native FormData typing differs slightly
-//       form.append("image", { uri: Platform.OS === "android" ? imageUri : imageUri.replace("file://", ""), name, type: mime });
+//       // FormData for RN: for Android uri must be the raw uri, for iOS remove file://
+//       const fileForForm: any = {
+//         uri: Platform.OS === "android" ? imageUri : imageUri.replace("file://", ""),
+//         name,
+//         type: mime,
+//       };
 
-//       const resp = await fetch(`${BACKEND_BASE}/api/images/upload`, {
+//       const form = new FormData();
+//       // backend expects field "image"
+//       // @ts-ignore (React Native FormData typing differs)
+//       form.append("image", fileForForm);
+
+//       // Send request to backend route
+//       const resp = await fetch(`${BACKEND_BASE}/api/disease/detect`, {
 //         method: "POST",
 //         body: form,
+//         // DO NOT set Content-Type — fetch will set the multipart boundary
 //       });
 
 //       const text = await resp.text();
 //       let json;
 //       try { json = JSON.parse(text); } catch { json = { message: text }; }
 
-//       if (!resp.ok && resp.status !== 200) {
+//       if (!resp.ok) {
 //         const msg = json?.message || `Server error (${resp.status})`;
 //         setError(msg);
 //         Alert.alert("Upload failed", msg);
@@ -120,16 +133,32 @@
 //         return;
 //       }
 
-//       // backend returns { record: { ... } } or record directly
+//       // Normalize response structure: accept either { record: {...} } or direct object
 //       const rec = json.record ?? json;
 //       setRecord(rec);
-//       // store selected disease for pesticide module (safe step)
+
+//       // 🔴 NEW: handle non-leaf images
+//       if (rec && (rec.isLeafImage === false || rec.diagnosis === "Not a leaf / plant image")) {
+//         try {
+//           await AsyncStorage.removeItem("pesticide_disease");
+//         } catch (e) {
+//           console.warn("AsyncStorage remove failed:", e);
+//         }
+//         Alert.alert(
+//           "Not a leaf image",
+//           "This photo does not look like a plant leaf. Please take a clear photo of a single leaf."
+//         );
+//         setLoading(false);
+//         return;
+//       }
+
+//       // Save diagnosis name for pesticide module (best-effort)
 //       try {
-//         const diag = (rec && (rec.diagnosis ?? rec.apiResponse?.suggestions?.[0]?.plant_name)) || "";
+//         const diag =
+//           (rec && (rec.diagnosis ?? rec.apiResponse?.suggestions?.[0]?.plant_name ?? rec.label ?? rec.plant)) || "";
 //         if (diag && diag.length > 0) {
 //           await AsyncStorage.setItem("pesticide_disease", String(diag));
 //         } else {
-//           // clear previous if none
 //           await AsyncStorage.removeItem("pesticide_disease");
 //         }
 //       } catch (e) {
@@ -137,14 +166,14 @@
 //       }
 //     } catch (err: any) {
 //       console.error(err);
-//       setError(err?.message || "Failed to analyze");
-//       Alert.alert("Error", String(err?.message || err));
+//       const message = err?.message ?? "Failed to analyze image";
+//       setError(message);
+//       Alert.alert("Error", message);
 //     } finally {
 //       setLoading(false);
 //     }
 //   }
 
-//   // When pressing "Open Pesticide Recommendations" we ensure AsyncStorage has disease then navigate
 //   async function openPesticide() {
 //     const diag = record?.diagnosis ?? record?.apiResponse?.suggestions?.[0]?.plant_name ?? null;
 //     try {
@@ -215,69 +244,54 @@
 
 //       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-//       {record ? (
+//       {record && (
 //         <Animated.View entering={FadeIn} style={styles.resultCard}>
-//           <Text style={styles.resultTitle}>Diagnosis</Text>
-//           <Text style={styles.resultLine}>Name: <Text style={{ fontWeight: "800" }}>{record.diagnosis ?? "—"}</Text></Text>
-//           <Text style={styles.resultLine}>Confidence: {record.confidence ? record.confidence + "%" : "-"}</Text>
+//           <Text style={styles.resultTitle}>Result</Text>
+//           <Text style={styles.resultLabel}>Diagnosis:</Text>
+//           <Text style={styles.resultValue}>{record.diagnosis || "Unknown"}</Text>
 
-//           {record.apiResponse?.suggestions && record.apiResponse.suggestions.length > 0 && (
+//           {record.confidence != null && (
 //             <>
-//               <Text style={[styles.resultTitle, { marginTop: 12 }]}>Top Suggestions</Text>
-//               {record.apiResponse.suggestions.slice(0, 3).map((s: any, idx: number) => (
-//                 <View key={idx} style={styles.suggest}>
-//                   <Text style={styles.suggestName}>{s.plant_name ?? (s.plant && s.plant.scientific_name) ?? "Unknown"}</Text>
-//                   <Text style={styles.suggestConf}>{s.probability ? Math.round(s.probability * 100) + "%" : "-"}</Text>
-//                 </View>
-//               ))}
+//               <Text style={styles.resultLabel}>Confidence:</Text>
+//               <Text style={styles.resultValue}>{record.confidence}%</Text>
 //             </>
 //           )}
 
-//           <Text style={[styles.resultTitle, { marginTop: 12 }]}>Quick Remedies</Text>
-//           <Text style={{ color: "#333" }}>
-//             {record.diagnosis ? `Based on ${record.diagnosis}, check recommended pesticides or organic treatments.` : "No diagnosis available."}
-//           </Text>
-
-//           <TouchableOpacity style={[styles.openBtn]} onPress={openPesticide}>
-//             <Text style={styles.openBtnText}>Open Pesticide Recommendations</Text>
+//           <TouchableOpacity style={[styles.cta, { marginTop: 16 }]} onPress={openPesticide}>
+//             <Text style={styles.ctaText}>Open Pesticide Recommendations</Text>
 //           </TouchableOpacity>
 //         </Animated.View>
-//       ) : null}
-
-//       <View style={{ height: 40 }} />
+//       )}
 //     </ScrollView>
 //   );
 // }
 
 // const styles = StyleSheet.create({
-//   wrap: { padding: 16, backgroundColor: "#f6fff7" },
-//   hero: { width: "100%", height: 160, borderRadius: 12, marginBottom: 12, overflow: "hidden", justifyContent: "center" },
-//   heroInner: { paddingHorizontal: 18 },
-//   title: { fontSize: 22, fontWeight: "900", color: "#064e3b" },
-//   subtitle: { color: "#0f5132", marginTop: 6 },
-//   preview: { height: 260, borderRadius: 12, overflow: "hidden", backgroundColor: "#fff", borderWidth: 1, borderColor: "#e6eee8" },
-//   placeholder: { justifyContent: "center", alignItems: "center", flex: 1 },
-//   placeholderText: { color: "#6b7280", marginTop: 8 },
-//   image: { width: "100%", height: "100%", resizeMode: "cover" },
-//   row: { flexDirection: "row", justifyContent: "space-between", marginTop: 12 },
-//   actionBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", padding: 12, borderRadius: 10, marginHorizontal: 6 },
-//   actionText: { color: "#fff", marginLeft: 8, fontWeight: "700" },
-//   cta: { marginTop: 12, padding: 14, borderRadius: 12, alignItems: "center" },
-//   ctaText: { color: "#fff", fontSize: 16, fontWeight: "900" },
-//   errorText: { color: "#b00020", marginTop: 12 },
-//   resultCard: { marginTop: 16, padding: 14, borderRadius: 12, backgroundColor: "#fff", borderWidth: 1, borderColor: "#e6eee8" },
-//   resultTitle: { fontSize: 16, fontWeight: "800", marginBottom: 8 },
-//   resultLine: { color: "#223", marginBottom: 6 },
-//   suggest: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#f2f5f2" },
-//   suggestName: { fontWeight: "700" },
-//   suggestConf: { color: "#228" },
-//   openBtn: { marginTop: 14, backgroundColor: "#0f5132", padding: 12, borderRadius: 10, alignItems: "center" },
-//   openBtnText: { color: "#fff", fontWeight: "800" },
+//   wrap: { paddingBottom: 40, backgroundColor: "#f0fdf4" },
+//   hero: { height: 180, justifyContent: "flex-end" },
+//   heroInner: { padding: 16 },
+//   title: { fontSize: 24, fontWeight: "700", color: "#fefce8" },
+//   subtitle: { fontSize: 14, color: "#e5e7eb", marginTop: 4 },
+//   preview: { margin: 16, borderRadius: 16, overflow: "hidden", backgroundColor: "#e5e7eb", height: 220 },
+//   image: { width: "100%", height: "100%" },
+//   placeholder: { alignItems: "center" },
+//   placeholderText: { marginTop: 8, color: "#6b7280" },
+//   row: { flexDirection: "row", paddingHorizontal: 16, marginTop: 8, gap: 12 },
+//   actionBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 10, borderRadius: 999 },
+//   actionText: { color: "#fff", fontWeight: "600", marginLeft: 6 },
+//   cta: { marginHorizontal: 16, marginTop: 16, paddingVertical: 12, borderRadius: 999, alignItems: "center" },
+//   ctaText: { color: "#fff", fontWeight: "700" },
+//   errorText: { marginHorizontal: 16, marginTop: 8, color: "#b91c1c" },
+//   resultCard: { marginHorizontal: 16, marginTop: 16, padding: 16, borderRadius: 16, backgroundColor: "#fff" },
+//   resultTitle: { fontSize: 18, fontWeight: "700", marginBottom: 8, color: "#065f46" },
+//   resultLabel: { fontSize: 14, fontWeight: "600", marginTop: 4, color: "#374151" },
+//   resultValue: { fontSize: 14, color: "#111827" },
 // });
 
+// app/smart-assistant/disease-detection.tsx
 
 // app/smart-assistant/disease-detection.tsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -288,14 +302,21 @@ import {
   Alert,
   ScrollView,
   Platform,
-  ImageBackground,
+  SafeAreaView,
+  StatusBar,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Animated, { FadeIn, FadeInUp, withSpring, useSharedValue, useAnimatedStyle } from "react-native-reanimated";
+import Animated, {
+  FadeIn,
+  FadeInUp,
+  withSpring,
+  useSharedValue,
+  useAnimatedStyle,
+} from "react-native-reanimated";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
-import { BACKEND_BASE } from "../../constants/backend"; // <-- use centralized backend constant
+import { BACKEND_BASE } from "../../constants/backend";
 
 export default function DiseaseDetection() {
   const router = useRouter();
@@ -304,15 +325,26 @@ export default function DiseaseDetection() {
   const [record, setRecord] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const scale = useSharedValue(1);
-  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const scaleGallery = useSharedValue(1);
+  const scaleCamera = useSharedValue(1);
+
+  const galleryStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scaleGallery.value }],
+  }));
+  const cameraStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scaleCamera.value }],
+  }));
 
   useEffect(() => {
     (async () => {
       if (Platform.OS !== "web") {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        const { status } =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== "granted") {
-          Alert.alert("Permission required", "Please enable photo permissions in settings.");
+          Alert.alert(
+            "Permission required",
+            "Please enable photo permissions in settings."
+          );
         }
       }
     })();
@@ -345,7 +377,10 @@ export default function DiseaseDetection() {
         Alert.alert("Permission required", "Please enable camera permission.");
         return;
       }
-      const res = await ImagePicker.launchCameraAsync({ quality: 0.8, allowsEditing: true });
+      const res = await ImagePicker.launchCameraAsync({
+        quality: 0.8,
+        allowsEditing: true,
+      });
       const cancelled = (res as any).cancelled ?? (res as any).canceled;
       if (!cancelled) {
         const uri = (res as any).uri ?? (res as any).assets?.[0]?.uri;
@@ -370,35 +405,40 @@ export default function DiseaseDetection() {
     setError(null);
 
     try {
-      // prepare filename & mime
       const filenameParts = imageUri.split("/");
-      const name = filenameParts[filenameParts.length - 1] || `photo.${Platform.OS === "android" ? "jpg" : "jpg"}`;
+      const name =
+        filenameParts[filenameParts.length - 1] ||
+        `photo.${Platform.OS === "android" ? "jpg" : "jpg"}`;
       const match = /\.(\w+)$/.exec(name);
       const ext = match ? match[1].toLowerCase() : "jpg";
       const mime = ext === "png" ? "image/png" : "image/jpeg";
 
-      // FormData for RN: for Android uri must be the raw uri, for iOS remove file://
       const fileForForm: any = {
-        uri: Platform.OS === "android" ? imageUri : imageUri.replace("file://", ""),
+        uri:
+          Platform.OS === "android"
+            ? imageUri
+            : imageUri.replace("file://", ""),
         name,
         type: mime,
       };
 
       const form = new FormData();
       // backend expects field "image"
-      // @ts-ignore (React Native FormData typing differs)
+      // @ts-ignore
       form.append("image", fileForForm);
 
-      // Send request to backend route (make sure backend exposes this)
       const resp = await fetch(`${BACKEND_BASE}/api/disease/detect`, {
         method: "POST",
         body: form,
-        // DO NOT set Content-Type — fetch will set the multipart boundary
       });
 
       const text = await resp.text();
       let json;
-      try { json = JSON.parse(text); } catch { json = { message: text }; }
+      try {
+        json = JSON.parse(text);
+      } catch {
+        json = { message: text };
+      }
 
       if (!resp.ok) {
         const msg = json?.message || `Server error (${resp.status})`;
@@ -408,14 +448,37 @@ export default function DiseaseDetection() {
         return;
       }
 
-      // Normalize response structure: accept either { record: {...} } or direct object
       const rec = json.record ?? json;
       setRecord(rec);
 
-      // Save diagnosis name for pesticide module (best-effort)
+      // handle non-leaf images
+      if (
+        rec &&
+        (rec.isLeafImage === false ||
+          rec.diagnosis === "Not a leaf / plant image")
+      ) {
+        try {
+          await AsyncStorage.removeItem("pesticide_disease");
+        } catch (e) {
+          console.warn("AsyncStorage remove failed:", e);
+        }
+        Alert.alert(
+          "Not a leaf image",
+          "This photo does not look like a plant leaf. Please take a clear photo of a single leaf."
+        );
+        setLoading(false);
+        return;
+      }
+
+      // Save diagnosis for pesticide module
       try {
         const diag =
-          (rec && (rec.diagnosis ?? rec.apiResponse?.suggestions?.[0]?.plant_name ?? rec.label ?? rec.plant)) || "";
+          (rec &&
+            (rec.diagnosis ??
+              rec.apiResponse?.suggestions?.[0]?.plant_name ??
+              rec.label ??
+              rec.plant)) ||
+          "";
         if (diag && diag.length > 0) {
           await AsyncStorage.setItem("pesticide_disease", String(diag));
         } else {
@@ -435,7 +498,10 @@ export default function DiseaseDetection() {
   }
 
   async function openPesticide() {
-    const diag = record?.diagnosis ?? record?.apiResponse?.suggestions?.[0]?.plant_name ?? null;
+    const diag =
+      record?.diagnosis ??
+      record?.apiResponse?.suggestions?.[0]?.plant_name ??
+      null;
     try {
       if (diag) await AsyncStorage.setItem("pesticide_disease", String(diag));
     } catch (e) {
@@ -445,123 +511,238 @@ export default function DiseaseDetection() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.wrap}>
-      <ImageBackground
-        source={{ uri: "https://images.unsplash.com/photo-1501004318641-b39e6451bec6" }}
-        style={styles.hero}
-        imageStyle={{ opacity: 0.18 }}
-      >
-        <View style={styles.heroInner}>
-          <Text style={styles.title}>Disease Detection</Text>
-          <Text style={styles.subtitle}>Snap a leaf, get AI-driven diagnosis & remedies.</Text>
-        </View>
-      </ImageBackground>
-
-      <Animated.View entering={FadeInUp} style={[styles.preview, imageUri ? {} : { justifyContent: "center", alignItems: "center" }]}>
-        {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.image} />
-        ) : (
-          <View style={styles.placeholder}>
-            <Feather name="image" size={46} color="#6b7280" />
-            <Text style={styles.placeholderText}>No image selected</Text>
-          </View>
-        )}
-      </Animated.View>
-
-      <View style={styles.row}>
-        <Animated.View style={[animatedStyle, { flex: 1 }]}>
-          <TouchableOpacity
-            onPressIn={() => (scale.value = withSpring(0.98))}
-            onPressOut={() => (scale.value = withSpring(1))}
-            style={[styles.actionBtn, { backgroundColor: "#047857" }]}
-            onPress={pickImage}
-            disabled={loading}
-          >
-            <Feather name="image" size={18} color="#fff" />
-            <Text style={styles.actionText}>Gallery</Text>
-          </TouchableOpacity>
-        </Animated.View>
-
-        <Animated.View style={[animatedStyle, { flex: 1 }]}>
-          <TouchableOpacity
-            onPressIn={() => (scale.value = withSpring(0.98))}
-            onPressOut={() => (scale.value = withSpring(1))}
-            style={[styles.actionBtn, { backgroundColor: "#0ea5a4" }]}
-            onPress={takePhoto}
-            disabled={loading}
-          >
-            <MaterialCommunityIcons name="camera-iris" size={18} color="#fff" />
-            <Text style={styles.actionText}>Camera</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </View>
-
-      <TouchableOpacity
-        style={[styles.cta, { backgroundColor: loading ? "#9ecbbf" : "#2563eb" }]}
-        onPress={analyzeDisease}
-        disabled={loading}
-      >
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.ctaText}>Analyze</Text>}
-      </TouchableOpacity>
-
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-      {record ? (
-        <Animated.View entering={FadeIn} style={styles.resultCard}>
-          <Text style={styles.resultTitle}>Diagnosis</Text>
-          <Text style={styles.resultLine}>Name: <Text style={{ fontWeight: "800" }}>{record.diagnosis ?? record.label ?? "—"}</Text></Text>
-          <Text style={styles.resultLine}>Confidence: {record.confidence ? record.confidence + "%" : (record.score ? Math.round(record.score * 100) + "%" : "-")}</Text>
-
-          {record.apiResponse?.suggestions && record.apiResponse.suggestions.length > 0 && (
-            <>
-              <Text style={[styles.resultTitle, { marginTop: 12 }]}>Top Suggestions</Text>
-              {record.apiResponse.suggestions.slice(0, 3).map((s: any, idx: number) => (
-                <View key={idx} style={styles.suggest}>
-                  <Text style={styles.suggestName}>{s.plant_name ?? (s.plant && s.plant.scientific_name) ?? "Unknown"}</Text>
-                  <Text style={styles.suggestConf}>{s.probability ? Math.round(s.probability * 100) + "%" : "-"}</Text>
-                </View>
-              ))}
-            </>
-          )}
-
-          <Text style={[styles.resultTitle, { marginTop: 12 }]}>Quick Remedies</Text>
-          <Text style={{ color: "#333" }}>
-            {record.diagnosis ? `Based on ${record.diagnosis}, check recommended pesticides or organic treatments.` : "No diagnosis available."}
+    <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="dark-content" backgroundColor="#bbf7d0" />
+      <ScrollView contentContainerStyle={styles.scrollWrap}>
+        {/* Header block (no background image now, neat solid color) */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Disease Detection</Text>
+          <Text style={styles.headerSubtitle}>
+            Upload a leaf photo to detect possible plant diseases with AI.
           </Text>
+        </View>
 
-          <TouchableOpacity style={[styles.openBtn]} onPress={openPesticide}>
-            <Text style={styles.openBtnText}>Open Pesticide Recommendations</Text>
-          </TouchableOpacity>
+        {/* Preview card */}
+        <Animated.View
+          entering={FadeInUp}
+          style={[
+            styles.previewCard,
+            !imageUri && { justifyContent: "center", alignItems: "center" },
+          ]}
+        >
+          {imageUri ? (
+            <Image source={{ uri: imageUri }} style={styles.previewImage} />
+          ) : (
+            <View style={styles.placeholder}>
+              <Feather name="image" size={46} color="#6b7280" />
+              <Text style={styles.placeholderText}>No image selected</Text>
+              <Text style={styles.placeholderHint}>
+                Choose from gallery or use camera below.
+              </Text>
+            </View>
+          )}
         </Animated.View>
-      ) : null}
 
-      <View style={{ height: 40 }} />
-    </ScrollView>
+        {/* Buttons row */}
+        <View style={styles.row}>
+          <Animated.View style={[galleryStyle, { flex: 1 }]}>
+            <TouchableOpacity
+              onPressIn={() => (scaleGallery.value = withSpring(0.97))}
+              onPressOut={() => (scaleGallery.value = withSpring(1))}
+              style={[styles.actionBtn, { backgroundColor: "#047857" }]}
+              onPress={pickImage}
+            >
+              <Feather name="image" size={18} color="#fff" />
+              <Text style={styles.actionText}>Gallery</Text>
+            </TouchableOpacity>
+          </Animated.View>
+
+          <Animated.View style={[cameraStyle, { flex: 1 }]}>
+            <TouchableOpacity
+              onPressIn={() => (scaleCamera.value = withSpring(0.97))}
+              onPressOut={() => (scaleCamera.value = withSpring(1))}
+              style={[styles.actionBtn, { backgroundColor: "#0ea5a4" }]}
+              onPress={takePhoto}
+            >
+              <MaterialCommunityIcons
+                name="camera-iris"
+                size={18}
+                color="#fff"
+              />
+              <Text style={styles.actionText}>Camera</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+
+        {/* Analyze button */}
+        <TouchableOpacity
+          style={[styles.cta, { backgroundColor: "#2563eb" }]}
+          onPress={analyzeDisease}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.ctaText}>Analyze</Text>
+          )}
+        </TouchableOpacity>
+
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+        {/* Result */}
+        {record && (
+          <Animated.View entering={FadeIn} style={styles.resultCard}>
+            <Text style={styles.resultTitle}>Result</Text>
+
+            <Text style={styles.resultLabel}>Diagnosis</Text>
+            <Text style={styles.resultValue}>
+              {record.diagnosis || "Unknown"}
+            </Text>
+
+            {record.confidence != null && (
+              <>
+                <Text style={styles.resultLabel}>Confidence</Text>
+                <Text style={styles.resultValue}>
+                  {record.confidence}%
+                </Text>
+              </>
+            )}
+
+            <TouchableOpacity
+              style={[styles.cta, { marginTop: 16 }]}
+              onPress={openPesticide}
+            >
+              <Text style={styles.ctaText}>
+                Open Pesticide Recommendations
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+
+        <View style={{ height: 32 }} />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { padding: 16, backgroundColor: "#f6fff7" },
-  hero: { width: "100%", height: 160, borderRadius: 12, marginBottom: 12, overflow: "hidden", justifyContent: "center" },
-  heroInner: { paddingHorizontal: 18 },
-  title: { fontSize: 22, fontWeight: "900", color: "#064e3b" },
-  subtitle: { color: "#0f5132", marginTop: 6 },
-  preview: { height: 260, borderRadius: 12, overflow: "hidden", backgroundColor: "#fff", borderWidth: 1, borderColor: "#e6eee8" },
-  placeholder: { justifyContent: "center", alignItems: "center", flex: 1 },
-  placeholderText: { color: "#6b7280", marginTop: 8 },
-  image: { width: "100%", height: "100%", resizeMode: "cover" },
-  row: { flexDirection: "row", justifyContent: "space-between", marginTop: 12 },
-  actionBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", padding: 12, borderRadius: 10, marginHorizontal: 6 },
-  actionText: { color: "#fff", marginLeft: 8, fontWeight: "700" },
-  cta: { marginTop: 12, padding: 14, borderRadius: 12, alignItems: "center" },
-  ctaText: { color: "#fff", fontSize: 16, fontWeight: "900" },
-  errorText: { color: "#b00020", marginTop: 12 },
-  resultCard: { marginTop: 16, padding: 14, borderRadius: 12, backgroundColor: "#fff", borderWidth: 1, borderColor: "#e6eee8" },
-  resultTitle: { fontSize: 16, fontWeight: "800", marginBottom: 8 },
-  resultLine: { color: "#223", marginBottom: 6 },
-  suggest: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#f2f5f2" },
-  suggestName: { fontWeight: "700" },
-  suggestConf: { color: "#228" },
-  openBtn: { marginTop: 14, backgroundColor: "#0f5132", padding: 12, borderRadius: 10, alignItems: "center" },
-  openBtnText: { color: "#fff", fontWeight: "800" },
+  safe: {
+    flex: 1,
+    backgroundColor: "#f0fdf4",
+  },
+  scrollWrap: {
+    paddingBottom: 24,
+  },
+  header: {
+    margin: 16,
+    marginBottom: 8,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: "#bbf7d0",
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#065f46",
+  },
+  headerSubtitle: {
+    marginTop: 6,
+    fontSize: 13,
+    color: "#166534",
+  },
+  previewCard: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: "#e5e7eb",
+    height: 230,
+  },
+  previewImage: {
+    width: "100%",
+    height: "100%",
+  },
+  placeholder: {
+    alignItems: "center",
+    paddingVertical: 28,
+    paddingHorizontal: 16,
+  },
+  placeholderText: {
+    marginTop: 8,
+    color: "#4b5563",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  placeholderHint: {
+    marginTop: 4,
+    color: "#6b7280",
+    fontSize: 12,
+    textAlign: "center",
+  },
+  row: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    marginTop: 14,
+    gap: 10,
+  },
+  actionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 999,
+  },
+  actionText: {
+    color: "#fff",
+    fontWeight: "600",
+    marginLeft: 6,
+    fontSize: 14,
+  },
+  cta: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    paddingVertical: 12,
+    borderRadius: 999,
+    alignItems: "center",
+  },
+  ctaText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 15,
+  },
+  errorText: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    color: "#b91c1c",
+    fontSize: 13,
+  },
+  resultCard: {
+    marginHorizontal: 16,
+    marginTop: 18,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: "#ffffff",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  resultTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 10,
+    color: "#065f46",
+  },
+  resultLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    marginTop: 6,
+    color: "#4b5563",
+  },
+  resultValue: {
+    fontSize: 14,
+    color: "#111827",
+    marginTop: 2,
+  },
 });
